@@ -8,3 +8,20 @@ wheels/
 
 # Virtual environments
 .venv
+env/
+venv/
+ENV/
+
+# Environment variables
+.env
+
+# MacOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+.DS_Store
+.github/workflows/ci.yml
+data/eu-agent-bench/
