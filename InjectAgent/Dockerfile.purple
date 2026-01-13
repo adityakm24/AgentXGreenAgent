@@ -1,0 +1,21 @@
+# InjecAgent Purple Agent (Baseline) Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install uv
+RUN pip install uv
+
+# Copy project files
+COPY pyproject.toml .
+COPY src/ src/
+
+# Install dependencies
+RUN uv sync --no-dev
+
+# Expose port
+EXPOSE 8001
+
+# Entry point with required AgentBeats arguments
+ENTRYPOINT ["uv", "run", "python", "-m", "src.purple_agent.server"]
+CMD ["--host", "0.0.0.0", "--port", "8001"]

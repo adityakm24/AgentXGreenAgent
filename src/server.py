@@ -4,19 +4,19 @@ import uuid
 import logging
 
 from src.models import (
-    AgentCard, TaskRequest, TaskResponse, TurnInput, TurnOutput, ToolResult
+    AgentCard, TaskRequest, TaskResponse, TurnInput, TurnOutput
 )
-from src.db import get_random_case, get_case_by_id
-from src.scoring import calculate_total_score
+from src.db import get_random_case
+from src.agent_core import JuristGreenAgent
 
 # In-memory session store
-# Maps task_id -> case_data
+# Maps task_id -> JuristGreenAgent instance
 sessions = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
-    print("Jurist-Bench Server Starting...")
+    print("Jurist-Bench Server Starting (Active Judge Mode)...")
     yield
     # Shutdown logic
     print("Jurist-Bench Server Shutting Down...")
@@ -27,17 +27,26 @@ app = FastAPI(lifespan=lifespan)
 async def get_agent_card():
     return AgentCard(
         name="Jurist-Bench-Green",
-        description="Evaluator for complex legal reasoning tasks (Chinese Law)",
+        description="Evaluator for complex legal reasoning tasks (Chinese Law). Acts as an Active Judge.",
         capabilities={
             "protocol": "A2A/1.0",
             "interaction_modes": ["synchronous"],
-            "difficulty": "hard"
+            "difficulty": "dynamic"
         },
         tools_provided=[
             {
                 "name": "investigate_facts",
-                "description": "Retrieves the full facts of the case (witness statements, evidence) which are not initially provided.",
-                "parameters": {"type": "object", "properties": {}}
+                "description": "Requests specific evidence from the Judge. Requires a 'query' argument specifying what to look for.",
+                "parameters": {
+                    "type": "object", 
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "What specific fact or document are you looking for?"
+                        }
+                    },
+                    "required": ["query"]
+                }
             }
         ]
     )
@@ -49,22 +58,27 @@ async def start_task():
         raise HTTPException(status_code=500, detail="No cases found in database.")
     
     task_id = str(uuid.uuid4())
-    sessions[task_id] = {
-        "case_id": case["id"],
-        "dataset_source": case["dataset_source"],
-        "turn_count": 0,
-        "max_turns": 5
-    }
+    
+    # Initialize the Active Agent
+    agent = JuristGreenAgent(task_id=task_id, case_id=case["id"])
+    sessions[task_id] = agent
     
     return TaskRequest(
         task_id=task_id,
-        context="You are a Judge in the Chinese Court system. Review the Plaintiff's request and conduct an investigation to issue a final opinion.",
+        context="You are a Judge/Lawyer in the Chinese Court system. Review the Plaintiff's request. WARNING: The Judge is strict. You must ask for specific evidence using the 'investigate_facts' tool with a clear 'query'.",
         initial_evidence=case["initial_context"],
         tools=[
              {
                 "name": "investigate_facts",
-                "description": "Retrieves the full facts of the case (witness statements, evidence).",
-                "parameters": {"type": "object", "properties": {}}
+                "description": "Requests specific evidence. argument: query (str).",
+                "parameters": {
+                    "type": "object", 
+                    "properties": {
+                        "query": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         ]
     )
@@ -75,50 +89,12 @@ async def handle_turn(turn: TurnInput):
     if task_id not in sessions:
         raise HTTPException(status_code=404, detail="Task ID not found")
     
-    session = sessions[task_id]
-    case = get_case_by_id(session["case_id"])
-    if turn.action == "submit":
-        # Handle Submission (Scoring)
-        submission = turn.submission
-        case = get_case_by_id(session["case_id"])
-        
-        # Calculate Logic-F1 Score
-        final_score = calculate_total_score(
-            submission=submission.final_verdict,
-            ground_truth=case["ground_truth_reasoning"]
-        )
-        
-        return TurnOutput(
-            task_id=task_id,
-            status="finished",
-            score=final_score,
-            message=f"Case Closed."
-        )
-        
-    elif turn.action == "tool_call":
-        # Handle Tool Calls
-        results = []
-        if turn.tool_calls:
-            for tool in turn.tool_calls:
-                if tool.name == "investigate_facts":
-                    # Reveal the hidden facts
-                    results.append(ToolResult(
-                        tool_call_id=tool.id,
-                        result=case["full_facts"]
-                    ))
-                else:
-                    results.append(ToolResult(
-                        tool_call_id=tool.id,
-                        result=None,
-                        status="error",
-                        error_message=f"Tool {tool.name} not found."
-                    ))
-        
-        session["turn_count"] += 1
-        return TurnOutput(
-            task_id=task_id,
-            status="continue",
-            tool_results=results
-        )
-
-    raise HTTPException(status_code=400, detail="Invalid action")
+    agent = sessions[task_id]
+    
+    try:
+        # Delegate the entire turn logic to the Agent Core
+        response = agent.process_turn(turn)
+        return response
+    except Exception as e:
+        print(f"Error processing turn: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

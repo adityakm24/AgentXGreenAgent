@@ -55,7 +55,7 @@ uv sync
 Create a `.env` file to point to your LLM (using simple local hosting software like LM Studio):
 ```bash
 LM_STUDIO_BASE_URL=http://localhost:1234/v1
-LM_STUDIO_MODEL=openai/gpt-oss-20b
+LM_STUDIO_MODEL=qwen/qwen3-4b-thinking-2507
 PORT=8000
 ```
 
@@ -101,7 +101,7 @@ Purple Agent: Thinking... 'I need more facts.'
 Purple Agent: Using tool 'investigate_facts'...
 Purple Agent: Obtained new evidence: 经审理，本院认定事实如下：原、被告系朋友关系。2011年期间，被告向原告借款2万元，后被告偿还部分款项。2011年9月26日，经原、被告结算，被告向原告出具借款16000元的借条一张，未约定利息及借款...
 
-Purple Agent: Formulating Verdict using Qwen3...
+Purple Agent: Formulating Verdict using qwen/qwen3-4b-thinking-2507...
 Purple Agent: Submitting Verdict...
 
 --- Interaction Complete ---

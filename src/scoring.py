@@ -10,7 +10,7 @@ load_dotenv()
 # Initialize OpenAI Client for Local LLM
 base_url = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
 api_key = os.getenv("OPENAI_API_KEY", "lm-studio")
-model_name = os.getenv("LM_STUDIO_MODEL", "openai/gpt-oss-20b")
+model_name = os.getenv("LM_STUDIO_MODEL", "qwen/qwen3-4b-thinking-2507")
 
 try:
     client = OpenAI(base_url=base_url, api_key=api_key)

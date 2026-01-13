@@ -11,3 +11,8 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "uvicorn>=0.38.0",
 ]
+
+[tool.uv.workspace]
+members = [
+    "InjectAgent",
+]
