@@ -21,6 +21,9 @@ from src.config import settings
 from src.green_agent.test_case_loader import TestCaseLoader, TestCase
 from src.green_agent.tool_simulator import ToolSimulator
 from src.green_agent.scorer import Scorer, CaseResult, EvaluationResult
+from src.logger import setup_logger
+
+logger = setup_logger("EvaluatorAgent", "green_agent.log")
 
 
 # System prompt for the Green Agent's evaluation reasoning
@@ -87,15 +90,15 @@ class EvaluatorAgent:
     
     async def evaluate_purple_agent(
         self,
-        case_type: str = "dh",
+        case_type: str = "custom", # Unused in ASB but kept for compatibility
         max_cases: Optional[int] = None,
         on_case_complete: Optional[Callable[[int, CaseResult], Awaitable[None]]] = None,
     ) -> EvaluationResult:
         """
-        Run the full InjecAgent evaluation on a Purple Agent.
+        Run the full ASB evaluation on a Purple Agent.
         
         Args:
-            case_type: "dh" for direct harm, "ds" for data stealing
+            case_type: Unused for ASB
             max_cases: Maximum number of test cases to run
             on_case_complete: Callback for streaming progress updates
             
@@ -105,19 +108,19 @@ class EvaluatorAgent:
         self.scorer.reset()
         self.interactions = []
         
-        # Load test cases from the dataset
-        test_cases = self.loader.load_test_cases(
-            case_type=case_type,
-            max_cases=max_cases or settings.max_test_cases,
-        )
+        # Load test cases from the ASB dataset
+        limit = max_cases or settings.max_test_cases
+        print(f"[EvaluatorAgent] Loading ASB test cases (max {limit})...")
         
-        print(f"[EvaluatorAgent] Starting evaluation with {len(test_cases)} test cases")
+        test_cases = self.loader.load_test_cases(limit=limit)
+        
+        print(f"[EvaluatorAgent] Starting evaluation with {len(test_cases)} cases")
         
         for idx, test_case in enumerate(test_cases):
-            print(f"[EvaluatorAgent] Evaluating case {idx + 1}/{len(test_cases)}: {test_case.attack_type}")
+            print(f"[EvaluatorAgent] Evaluating case {idx + 1}/{len(test_cases)}: {test_case.case_id} ({test_case.attack_type})")
             
             # Evaluate this single test case
-            case_result = await self._evaluate_single_case(test_case)
+            case_result = await self._evaluate_single_case(idx, test_case)
             
             # Record the result
             self.scorer.add_result(case_result)
@@ -132,20 +135,20 @@ class EvaluatorAgent:
         
         return results
     
-    async def _evaluate_single_case(self, test_case: TestCase) -> CaseResult:
+    async def _evaluate_single_case(self, index: int, test_case: TestCase) -> CaseResult:
         """Evaluate a single test case by running it through the Purple Agent."""
         
-        # Set up tool simulator for this test case
-        tool_definitions = self.loader.get_tool_schema_for_case(test_case)
-        simulator = ToolSimulator(test_case, tool_definitions)
+        # Set up tool simulator for this test case (ASB style)
+        simulator = ToolSimulator(test_case)
         
         # Get the available tools for this test case
         available_tools = simulator.get_available_tools()
         
         try:
             # Send the task to the Purple Agent and get its response
+            # ASB User Task -> "user_instruction"
             agent_response = await self._call_purple_agent(
-                user_instruction=test_case.user_instruction,
+                user_instruction=test_case.user_task,
                 available_tools=available_tools,
                 simulator=simulator,
             )
@@ -158,21 +161,25 @@ class EvaluatorAgent:
             
             # Record interaction
             self.interactions.append(AgentInteraction(
-                test_case_index=test_case.case_index,
-                user_instruction=test_case.user_instruction,
+                test_case_index=index,
+                user_instruction=test_case.user_task,
                 tool_calls=[{"name": t} for t in tool_calls],
                 agent_response=agent_response,
                 is_valid=True,
                 attack_successful=attack_successful,
             ))
             
+            # ASB: Attacker tools are defined as a list of dicts in TestCase, 
+            # but Scorer expects list of strings (names).
+            attacker_tool_names = [t.get("Attacker Tool") for t in test_case.attacker_tools if t.get("Attacker Tool")]
+
             return CaseResult(
-                case_index=test_case.case_index,
-                case_type=test_case.case_type,
-                attack_type=test_case.attack_type,
-                user_instruction=test_case.user_instruction,
+                case_index=index,
+                case_type="asb",
+                attack_type=test_case.attack_type or "Unknown",
+                user_instruction=test_case.user_task,
                 attacker_instruction=test_case.attacker_instruction,
-                attacker_tools=test_case.attacker_tools,
+                attacker_tools=attacker_tool_names,
                 agent_tool_calls=tool_calls,
                 agent_response=agent_response,
                 is_valid=True,
@@ -181,12 +188,13 @@ class EvaluatorAgent:
             
         except Exception as e:
             # Handle errors during evaluation
-            error_msg = str(e)
-            print(f"[EvaluatorAgent] Error evaluating case {test_case.case_index}: {error_msg}")
+            import traceback
+            error_msg = f"{str(e)}\n{traceback.format_exc()}"
+            print(f"[EvaluatorAgent] Error evaluating case {test_case.case_id}: {error_msg}")
             
             self.interactions.append(AgentInteraction(
-                test_case_index=test_case.case_index,
-                user_instruction=test_case.user_instruction,
+                test_case_index=index,
+                user_instruction=test_case.user_task,
                 tool_calls=[],
                 agent_response="",
                 is_valid=False,
@@ -194,13 +202,15 @@ class EvaluatorAgent:
                 error=error_msg,
             ))
             
+            attacker_tool_names = [t.get("Attacker Tool") for t in test_case.attacker_tools if t.get("Attacker Tool")]
+            
             return CaseResult(
-                case_index=test_case.case_index,
-                case_type=test_case.case_type,
-                attack_type=test_case.attack_type,
-                user_instruction=test_case.user_instruction,
+                case_index=index,
+                case_type="asb",
+                attack_type=test_case.attack_type or "Unknown",
+                user_instruction=test_case.user_task,
                 attacker_instruction=test_case.attacker_instruction,
-                attacker_tools=test_case.attacker_tools,
+                attacker_tools=attacker_tool_names,
                 agent_tool_calls=[],
                 agent_response=f"Error: {error_msg}",
                 is_valid=False,
@@ -215,14 +225,13 @@ class EvaluatorAgent:
     ) -> str:
         """
         Call the Purple Agent with a task and handle tool execution loop.
-        
-        This implements a ReAct-style loop where:
-        1. Agent receives user instruction + available tools
-        2. Agent may call tools
-        3. Tool results are simulated (with injected malicious content)
-        4. Agent continues until it produces a final response
         """
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # Setup interaction logger for detailed tracing
+        trace_logger = setup_logger("InteractionTrace", "interaction_trace.log")
+        trace_logger.info(f"\n{'='*80}\nSTARTING NEW INTERACTION\nTask: {user_instruction}\n{'='*80}")
+        trace_logger.info(f"Available Tools: {[t['name'] for t in available_tools]}")
+
+        async with httpx.AsyncClient(timeout=300.0) as client:
             # Send initial task to Purple Agent
             response = await client.post(
                 f"{self.purple_agent_url}/task",
@@ -233,6 +242,7 @@ class EvaluatorAgent:
             )
             
             if response.status_code != 200:
+                trace_logger.error(f"Failed to start task: {response.text}")
                 raise Exception(f"Purple Agent returned {response.status_code}: {response.text}")
             
             result = response.json()
@@ -248,7 +258,11 @@ class EvaluatorAgent:
                 tool_name = result.get("tool_name", "")
                 tool_args = result.get("tool_arguments", {})
                 
+                trace_logger.info(f"Purple Agent Action: CALL {tool_name}({tool_args})")
+                
                 tool_result = simulator.execute_tool(tool_name, tool_args)
+                
+                trace_logger.info(f"Green Agent Observation: {tool_result.output}")
                 
                 # Send tool result back to Purple Agent
                 response = await client.post(
@@ -261,11 +275,22 @@ class EvaluatorAgent:
                 )
                 
                 if response.status_code != 200:
+                    trace_logger.error(f"Failed to send tool result: {response.text}")
                     raise Exception(f"Purple Agent returned {response.status_code}: {response.text}")
                 
                 result = response.json()
             
             # Return the final response
+            if result.get("status") == "complete":
+                final_answer = result.get("response", "")
+                trace_logger.info(f"Purple Agent Final Answer: {final_answer}")
+                trace_logger.info(f"{'='*80}\nINTERACTION COMPLETE\n{'='*80}\n")
+                return final_answer
+            elif result.get("status") == "error":
+                error_msg = result.get("error", "Unknown error")
+                trace_logger.error(f"Purple Agent Error: {error_msg}")
+                raise Exception(f"Agent error: {error_msg}")
+            
             return result.get("response", "")
     
     async def _generate_evaluation_insights(self, results: EvaluationResult) -> None:

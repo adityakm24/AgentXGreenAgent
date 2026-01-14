@@ -13,7 +13,12 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 
+from langchain_core.tools import tool
+
 from src.config import settings
+from src.logger import setup_logger
+
+logger = setup_logger("PurpleAgent", "purple_agent.log")
 
 
 # ReAct-style system prompt for the agent
@@ -100,7 +105,9 @@ Please complete the task using the available tools if needed."""
         ]
         
         # Get initial response
-        return self._get_next_action()
+        response = self._get_next_action()
+        logger.info(f"Task started. Initial response: {response.get('status')} - {response.get('tool_name') or 'Final Answer'}")
+        return response
     
     def handle_tool_result(
         self, 
@@ -116,13 +123,18 @@ Please complete the task using the available tools if needed."""
         if self.current_state is None:
             return {"status": "error", "error": "No active task"}
         
+        logger.info(f"Handling tool result for {tool_name}. Success: {success}")
+        logger.debug(f"Tool Output: {tool_output[:200]}..." if len(tool_output) > 200 else f"Tool Output: {tool_output}")
+        
         # Add tool result to conversation
         result_message = f"Tool Result ({tool_name}):\n{tool_output}"
         self.current_state.messages.append(AIMessage(content=f"Called {tool_name}"))
         self.current_state.messages.append(HumanMessage(content=result_message))
         
         # Get next action
-        return self._get_next_action()
+        response = self._get_next_action()
+        logger.info(f"Agent response: {response.get('status')} - {response.get('tool_name') or 'Final Answer'}")
+        return response
     
     def _get_next_action(self) -> Dict[str, Any]:
         """Get the next action from the LLM."""
@@ -131,6 +143,7 @@ Please complete the task using the available tools if needed."""
         
         try:
             # Call the LLM
+            logger.info("Invoking LLM...")
             response = self.llm.invoke(self.current_state.messages)
             content = response.content
             

@@ -5,7 +5,7 @@ Centralized configuration loading from .env file.
 All settings can be changed in .env and will apply across the codebase.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from pathlib import Path
 
@@ -25,18 +25,25 @@ class Settings(BaseSettings):
     purple_agent_host: str = Field(default="0.0.0.0", alias="PURPLE_AGENT_HOST")
     purple_agent_port: int = Field(default=8001, alias="PURPLE_AGENT_PORT")
     
-    # Dataset Configuration
+    # Dataset Configuration (ASB)
     dataset_path: str = Field(default="./data_repo/data", alias="DATASET_PATH")
-    eval_setting: str = Field(default="base", alias="EVAL_SETTING")
+    asb_user_tasks_file: str = Field(default="agent_task.jsonl", alias="ASB_USER_TASKS_FILE")
+    asb_attacker_tools_file: str = Field(default="all_attack_tools.jsonl", alias="ASB_ATTACKER_TOOLS_FILE")
+    asb_normal_tools_file: str = Field(default="all_normal_tools.jsonl", alias="ASB_NORMAL_TOOLS_FILE")
     
     # Evaluation Configuration  
-    max_test_cases: int = Field(default=100, alias="MAX_TEST_CASES")
-    max_agent_iterations: int = Field(default=10, alias="MAX_AGENT_ITERATIONS")
+    attack_type: str = Field(default="observation_prompt_injection", alias="ATTACK_TYPE")
+    max_test_cases: int = Field(default=10, alias="MAX_TEST_CASES") # Reduced default for heavy ASB generation
+    max_agent_iterations: int = Field(default=15, alias="MAX_AGENT_ITERATIONS")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    # Logging
+    log_dir: str = Field(default="logs", alias="LOG_DIR")
+
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     @property
     def dataset_dir(self) -> Path:

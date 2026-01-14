@@ -9,21 +9,18 @@ dependencies = [
     "langchain>=0.3.0",
     "langchain-openai>=0.2.0",
     "langgraph>=0.2.0",
-    
     # Web server
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
-    
     # Data handling
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
     "python-dotenv>=1.0.0",
-    
     # HTTP client
     "httpx>=0.28.0",
-    
     # Utilities
     "rich>=13.0.0",
+    "jsonlines>=4.0.0",
 ]
 
 [project.optional-dependencies]

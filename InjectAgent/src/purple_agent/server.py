@@ -55,6 +55,9 @@ async def startup():
     global agent
     agent = PurpleAgent()
     print(f"[PurpleAgent] Server started, using model {settings.llm_model_name}")
+    from src.logger import setup_logger
+    logger = setup_logger("PurpleAgentServer", "purple_agent.log")
+    logger.info(f"Server started on port {settings.purple_agent_port}, using model {settings.llm_model_name}")
 
 
 @app.get("/")

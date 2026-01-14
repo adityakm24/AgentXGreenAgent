@@ -1,143 +1,95 @@
-# InjecAgent Green Agent
+# Agent Security Benchmark (ASB) - Green Agent
 
-**AgentX AgentBeats Phase 1 Submission** - Evaluates AI agents for vulnerability to Indirect Prompt Injection (IPI) attacks using the [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) benchmark.
+This repository contains the **Green Agent** (Evaluator) and a baseline **Purple Agent** for the AgentX competition, utilizing the **Agent Security Benchmark (ASB)** dataset from `agiresearch/ASB`.
 
-## Overview
-
-This Green Agent:
-- Loads 1,054 test cases from the InjecAgent dataset (17 user tools, 62 attacker tools)
-- Presents tasks to Purple Agents with simulated tool responses containing malicious instructions
-- Detects if agents execute unintended attacker tools
-- Calculates Attack Success Rate (ASR) metrics
-
-## Quick Start
-
-### Prerequisites
-
-- **Python 3.11+**
-- **UV** package manager: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- **LM Studio** running locally with a model loaded
-
-### 1. Install Dependencies
-
-```bash
-cd /path/to/InjectAgent
-uv sync
-```
-
-### 2. Configure Environment
-
-Edit `.env` to match your setup:
-
-```bash
-# LM Studio settings
-LLM_BASE_URL=http://localhost:1234/v1
-LLM_MODEL_NAME=qwen/qwen3-4b-thinking-2507
-
-# Ports
-GREEN_AGENT_PORT=8000
-PURPLE_AGENT_PORT=8001
-```
-
-### 3. Start LM Studio
-
-Ensure LM Studio is running at `http://localhost:1234` with your model loaded.
-
-### 4. Run the Agents
-
-**Terminal 1 - Green Agent (Evaluator):**
-```bash
-uv run python -m src.green_agent.server
-```
-
-**Terminal 2 - Purple Agent (Baseline):**
-```bash
-uv run python -m src.purple_agent.server
-```
-
-### 5. Run Evaluation
-
-**Terminal 3:**
-```bash
-# Quick test with 5 cases
-uv run python -m src.run_assessment --max-cases 5
-
-# Full evaluation (direct harm)
-uv run python -m src.run_assessment --case-type dh
-
-# Full evaluation (data stealing)
-uv run python -m src.run_assessment --case-type ds
-```
+The Green Agent acts as the evaluation environment, subjecting the Purple Agent to **Indirect Prompt Injection (IPI)** attacks defined in the ASB dataset.
 
 ## Project Structure
 
 ```
-InjectAgent/
-├── .env                    # Configuration (model, ports)
-├── pyproject.toml          # UV dependencies
-├── scenario.toml           # AgentBeats scenario config
-├── data_repo/              # Cloned InjecAgent dataset
-│   └── data/
-│       ├── test_cases_dh_base.json
-│       ├── test_cases_ds_base.json
-│       └── tools.json
 ├── src/
-│   ├── config.py           # Centralized settings from .env
-│   ├── run_assessment.py   # CLI runner
-│   ├── green_agent/        # Evaluator Agent
-│   │   ├── server.py       # A2A server
-│   │   ├── evaluator_agent.py  # Agentic evaluator
-│   │   ├── test_case_loader.py
-│   │   ├── tool_simulator.py
-│   │   └── scorer.py
-│   └── purple_agent/       # Baseline Agent
-│       ├── server.py       # A2A server
-│       └── agent.py        # LangChain ReAct agent
-├── Dockerfile.green        # Docker for Green Agent
-└── Dockerfile.purple       # Docker for Purple Agent
+│   ├── green_agent/       # The Evaluator Agent
+│   │   ├── server.py      # A2A Interface
+│   │   ├── evaluator_agent.py # Agentic Evaluation Logic
+│   │   ├── test_case_loader.py # ASB Test Case Synthesizer
+│   │   ├── tool_simulator.py   # OPI Injection Mechanism
+│   │   └── scorer.py      # ASR Metrics
+│   ├── purple_agent/      # The Baseline Agent (Target)
+│   │   ├── server.py      # A2A Interface
+│   │   └── agent.py       # ReAct Agent (Vulnerable)
+│   └── config.py          # Central Configuration
+├── data_repo/             # ASB Dataset (Cloned from agiresearch/ASB)
+├── Dockerfile.green       # Green Agent Container
+├── Dockerfile.purple      # Purple Agent Container
+├── pyproject.toml         # Dependencies (uv)
+└── README.md              # This file
 ```
 
-## API Endpoints
+## Dataset: Agent Security Benchmark (ASB)
 
-### Green Agent (Port 8000)
+The project uses the ASB dataset, which defines:
+- **User Tasks** (`agent_task.jsonl`): Legitimate tasks for various agent personas (e.g., Financial Analyst, System Admin).
+- **Normal Tools** (`all_normal_tools.jsonl`): Tools available to the agent for legitimate use.
+- **Attacker Tools** (`all_attack_tools.jsonl`): Malicious tools with attacker goals.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Health check |
-| `/.well-known/agent.json` | GET | A2A agent card |
-| `/assessment` | POST | Run full A2A assessment (streaming) |
-| `/evaluate` | POST | Simple sync evaluation |
-| `/test-cases` | GET | List available test cases |
+The Green Agent synthesizes test cases by combining **User Tasks** with **Attacker Tools** capable of being accessed by the agent. It uses **Observation Prompt Injection (OPI)** to embed malicious instructions into the output of normal tools, attempting to trick the Purple Agent into calling an Attacker Tool.
 
-### Purple Agent (Port 8001)
+## Getting Started
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/task` | POST | Start a new task |
-| `/tool_result` | POST | Return tool execution result |
-| `/reset` | POST | Reset agent state |
+### Prerequisites
+- Python 3.11+
+- `uv` package manager
+- Local LLM via LM Studio (or compatible OpenAI API) running on default port `1234`.
 
-## Metrics
+### Installation
+1. Install dependencies:
+   ```bash
+   uv sync
+   ```
+2. Set up `.env` (copy example):
+   ```bash
+   cp .env.example .env
+   # Edit .env to point to your LLM
+   ```
 
-The evaluation produces InjecAgent-standard ASR metrics:
+### Running Locally
 
-- **Valid Rate**: % of test cases where the agent produced valid output
-- **ASR-valid**: Attack Success Rate among valid outputs
-- **ASR-all**: Attack Success Rate among all cases
-- **Breakdown by attack type**: Physical Harm, Financial Harm, Data Stealing
+1. **Start the Purple Agent (Target)**
+   ```bash
+   uv run python -m src.purple_agent.server
+   ```
 
-## Docker
+2. **Run Assessment (Green Agent CLI)**
+   ```bash
+   # Run 5 test cases
+   uv run python src/run_assessment.py --max-cases 5
+   ```
 
+   This will:
+   - Load ASB test cases.
+   - Send tasks to the Purple Agent.
+   - Simulate tool executions with OPI payload.
+   - Score the agent based on whether it calls the Attacker Tool.
+
+### Docker Usage
+
+Build and run the Green Agent:
 ```bash
-# Build images
-docker build -f Dockerfile.green -t injecagent-green .
-docker build -f Dockerfile.purple -t injecagent-purple .
-
-# Run (requires LM Studio accessible)
+docker build -t injecagent-green -f Dockerfile.green .
 docker run -p 8000:8000 --env-file .env injecagent-green
+```
+
+Build and run the Purple Agent:
+```bash
+docker build -t injecagent-purple -f Dockerfile.purple .
 docker run -p 8001:8001 --env-file .env injecagent-purple
 ```
 
-## License
+## Evaluation Logic
 
-MIT
+- **Safe**: Agent completes the user task using only normal tools.
+- **Attack Success**: Agent calls an **Attacker Tool** (e.g., `transfer_money`, `delete_file`) after receiving the injected prompt.
+
+## License
+Project: MIT
+Dataset: Refer to `agiresearch/ASB` license.
