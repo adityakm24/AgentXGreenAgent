@@ -31,9 +31,34 @@ class Settings(BaseSettings):
     asb_attacker_tools_file: str = Field(default="all_attack_tools.jsonl", alias="ASB_ATTACKER_TOOLS_FILE")
     asb_normal_tools_file: str = Field(default="all_normal_tools.jsonl", alias="ASB_NORMAL_TOOLS_FILE")
     
+    # Attack Configuration
+    attack_method: str = Field(
+        default="observation_prompt_injection", 
+        alias="ATTACK_METHOD",
+        description="Attack method: observation_prompt_injection, direct_prompt_injection, pot_backdoor, memory_attack, all"
+    )
+    attack_sub_types: str = Field(
+        default="naive",
+        alias="ATTACK_SUB_TYPES",
+        description="Comma-separated sub-types: naive, fake_completion, escape_characters, context_ignoring, combined_attack"
+    )
+    attack_tool_filter: str = Field(
+        default="all",
+        alias="ATTACK_TOOL_FILTER",
+        description="Filter attacker tools: all, agg (aggressive only), non-agg (non-aggressive only)"
+    )
+    
+    # PoT Backdoor Configuration
+    pot_triggers: str = Field(
+        default="with perspicacious discernment",
+        alias="POT_TRIGGERS",
+        description="Comma-separated backdoor trigger phrases"
+    )
+    pot_task_file: str = Field(default="agent_task_pot.jsonl", alias="POT_TASK_FILE")
+    pot_msg_file: str = Field(default="agent_task_pot_msg.jsonl", alias="POT_MSG_FILE")
+    
     # Evaluation Configuration  
-    attack_type: str = Field(default="observation_prompt_injection", alias="ATTACK_TYPE")
-    max_test_cases: int = Field(default=10, alias="MAX_TEST_CASES") # Reduced default for heavy ASB generation
+    max_test_cases: int = Field(default=10, alias="MAX_TEST_CASES")
     max_agent_iterations: int = Field(default=15, alias="MAX_AGENT_ITERATIONS")
     
     # Logging
