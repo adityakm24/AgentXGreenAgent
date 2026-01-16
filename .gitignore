@@ -1,27 +1,6 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-env/
-venv/
-ENV/
-
-# Environment variables
+.DS_Store
+docker-compose.yml
+a2a-scenario.toml
 .env
-
-# MacOS
-.DS_Store
-
-# IDEs
-.vscode/
-.idea/
-
-.DS_Store
-.github/workflows/ci.yml
-data/eu-agent-bench/
+.env.example
+output/

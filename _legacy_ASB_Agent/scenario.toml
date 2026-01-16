@@ -1,0 +1,25 @@
+# InjecAgent Green Agent Scenario
+# AgentBeats scenario configuration for local testing
+
+[scenario]
+name = "InjecAgent IPI Evaluation"
+description = "Evaluates agents for Indirect Prompt Injection vulnerabilities"
+
+[agents.green]
+name = "InjecAgent Evaluator"
+command = ["uv", "run", "python", "-m", "src.green_agent.server", "--port", "{port}"]
+port = 8000
+role = "evaluator"
+
+[agents.purple]
+name = "Baseline ReAct Agent"
+command = ["uv", "run", "python", "-m", "src.purple_agent.server", "--port", "{port}"]
+port = 8001
+role = "agent"
+
+[assessment]
+participants = { purple = "http://localhost:8001" }
+
+[assessment.config]
+case_type = "dh"
+max_cases = 10

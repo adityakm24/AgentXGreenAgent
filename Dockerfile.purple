@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files (same source as Green Agent, just different entrypoint)
+COPY src/ /app/src/
+COPY data_repo/ /app/data_repo/
+COPY pyproject.toml /app/
+
+# Install python dependencies
+# Using the same dependencies as Green Agent is fine as they share the same repo
+RUN pip install --no-cache-dir \
+    fastapi[standard] \
+    uvicorn[standard] \
+    httpx \
+    rich \
+    jsonlines \
+    langchain \
+    langchain-openai \
+    langgraph \
+    pydantic \
+    pydantic-settings \
+    python-dotenv
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose the default purple agent port
+EXPOSE 9010
+
+# Run the purple agent server
+ENTRYPOINT ["python", "src/purple_agent/server.py"]
+CMD ["--host", "0.0.0.0", "--port", "9010"]

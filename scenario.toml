@@ -1,0 +1,20 @@
+[green_agent]
+# For submission, uncomment and set your AgentBeats ID:
+# agentbeats_id = "your_green_agent_id"
+# For local testing, use your built Docker image:
+image = "ghcr.io/meninblack26/asb_multiturn_agents/green-agent:latest"
+env = { LLM_BASE_URL = "${LLM_BASE_URL}", LLM_API_KEY = "${LLM_API_KEY}", LLM_MODEL_NAME = "${LLM_MODEL_NAME}", LOG_LEVEL = "INFO" }
+
+# The Purple Agent (Target) configuration
+[[participants]]
+name = "purple"
+# For local testing, use the built Docker image:
+image = "ghcr.io/meninblack26/asb_multiturn_agents/purple-agent:latest"
+# agentbeats_id = "..." 
+env = { LLM_BASE_URL = "${LLM_BASE_URL}", LLM_API_KEY = "${LLM_API_KEY}", LLM_MODEL_NAME = "${LLM_MODEL_NAME}", LOG_LEVEL = "INFO" }
+
+[config]
+# Configuration sent to the Green Agent - ALL ATTACKS for submission
+attack_method = "all"  # Options: observation_prompt_injection, direct_prompt_injection, pot_backdoor, memory_attack, all
+attack_sub_types = "naive,fake_completion,escape_characters,context_ignoring,combined_attack"
+max_cases = 9999  # Use all available test cases
