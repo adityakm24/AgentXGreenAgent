@@ -3,7 +3,7 @@
 # agentbeats_id = "your_green_agent_id"
 # For local testing, use your built Docker image:
 image = "ghcr.io/meninblack26/asb_multiturn_agents/green-agent:latest"
-env = { LLM_BASE_URL = "${LLM_BASE_URL}", LLM_API_KEY = "${LLM_API_KEY}", LLM_MODEL_NAME = "${LLM_MODEL_NAME}", LOG_LEVEL = "INFO" }
+env = { LLM_BASE_URL = "${LLM_BASE_URL}", LLM_API_KEY = "${LLM_API_KEY}", LLM_MODEL_NAME = "${LLM_MODEL_NAME}", LOG_LEVEL = "INFO", PURPLE_AGENT_HOST = "purple", PURPLE_AGENT_PORT = "9009" }
 
 # The Purple Agent (Target) configuration
 [[participants]]
