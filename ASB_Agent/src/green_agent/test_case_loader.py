@@ -43,6 +43,13 @@ class TestCase:
     
     # Aggressive flag
     is_aggressive: bool = False
+    
+    # Two-Chance Evaluation Fields (NEW)
+    user_task_detailed: Optional[Dict[str, Any]] = None
+    # Structure: {"task": str, "intent": str, "impact": str, "detailed_steps": List[str]}
+    
+    attacker_instruction_detailed: Optional[Dict[str, Any]] = None
+    # Structure: {"task": str, "intent": str, "impact": str, "detailed_steps": List[str]}
 
 
 class TestCaseLoader:
@@ -58,6 +65,42 @@ class TestCaseLoader:
         self.pot_tasks_path = self.data_dir / settings.pot_task_file
         self.pot_msg_path = self.data_dir / settings.pot_msg_file
         
+        # NEW: Detailed instruction file paths
+        self.user_task_detailed_path = self.data_dir / settings.user_task_detailed_file
+        self.attacker_instruction_detailed_path = self.data_dir / settings.attacker_instruction_detailed_file
+        
+        # Load detailed instructions into memory (dictionaries)
+        self.user_task_detailed_map = self._load_detailed_user_tasks()
+        self.attacker_instruction_detailed_map = self._load_detailed_attacker_instructions()
+    
+    def _load_detailed_user_tasks(self) -> Dict[str, Dict[str, Any]]:
+        """Load user_task_detailed_instructions.json into memory."""
+        if not self.user_task_detailed_path.exists():
+            print(f"[Warning] Detailed user tasks file not found: {self.user_task_detailed_path}")
+            return {}
+        try:
+            with open(self.user_task_detailed_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            print(f"[TestCaseLoader] Loaded {len(data)} detailed user tasks")
+            return data
+        except Exception as e:
+            print(f"[Warning] Failed to load detailed user tasks: {e}")
+            return {}
+    
+    def _load_detailed_attacker_instructions(self) -> Dict[str, Dict[str, Any]]:
+        """Load attacker_instruction_detailed_steps.json into memory."""
+        if not self.attacker_instruction_detailed_path.exists():
+            print(f"[Warning] Detailed attacker instructions file not found: {self.attacker_instruction_detailed_path}")
+            return {}
+        try:
+            with open(self.attacker_instruction_detailed_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            print(f"[TestCaseLoader] Loaded {len(data)} detailed attacker instructions")
+            return data
+        except Exception as e:
+            print(f"[Warning] Failed to load detailed attacker instructions: {e}")
+            return {}
+    
     def load_user_tasks(self, use_pot: bool = False) -> List[Dict[str, Any]]:
         """Load user tasks from agent_task.jsonl or agent_task_pot.jsonl."""
         path = self.pot_tasks_path if use_pot else self.user_tasks_path
@@ -123,7 +166,8 @@ class TestCaseLoader:
         tool_filter: str = "all",
         pot_trigger: Optional[str] = None,
         agent_filter: Optional[str] = None, 
-        limit: int = 100
+        limit: int = 100,
+        load_detailed: bool = False  # NEW parameter
     ) -> List[TestCase]:
         """
         Synthesize test cases with attack method awareness.
@@ -135,6 +179,7 @@ class TestCaseLoader:
             pot_trigger: Backdoor trigger phrase for PoT attacks
             agent_filter: Filter by specific agent name
             limit: Maximum number of test cases
+            load_detailed: Load detailed instructions for two-chance evaluation
         """
         # Handle "all" attack methods
         if attack_method == "all":
@@ -146,7 +191,8 @@ class TestCaseLoader:
                     tool_filter=tool_filter,
                     pot_trigger=pot_trigger,
                     agent_filter=agent_filter,
-                    limit=limit // 4  # Divide limit among methods
+                    limit=limit // 4,  # Divide limit among methods
+                    load_detailed=load_detailed  # Pass through
                 )
                 all_cases.extend(cases)
             return all_cases[:limit]
@@ -209,6 +255,24 @@ class TestCaseLoader:
                         attacker_tools=[atk_tool],
                         is_aggressive=atk_tool.get("Aggressive") == "True",
                     )
+                    
+                    # NEW: Load detailed instructions if requested
+                    if load_detailed:
+                        # Match detailed user task by exact string lookup
+                        user_task_detailed = self.user_task_detailed_map.get(task_str)
+                        if user_task_detailed:
+                            tc.user_task_detailed = user_task_detailed
+                        else:
+                            print(f"[Warning] No detailed user task found for: {task_str[:80]}...")
+                        
+                        # Match detailed attacker instruction by exact string lookup
+                        attacker_instruction = atk_tool.get("Attacker Instruction")
+                        attacker_detailed = self.attacker_instruction_detailed_map.get(attacker_instruction)
+                        if attacker_detailed:
+                            tc.attacker_instruction_detailed = attacker_detailed
+                        else:
+                            print(f"[Warning] No detailed attacker instruction found for: {attacker_instruction[:80]}...")
+                    
                     test_cases.append(tc)
                     case_counter += 1
                     

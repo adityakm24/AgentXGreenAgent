@@ -89,6 +89,12 @@ Examples:
     )
     
     parser.add_argument(
+        "--two-chance",
+        action="store_true",
+        help="Enable two-chance evaluation with detailed instructions (gives agents a second try with step-by-step guidance)"
+    )
+    
+    parser.add_argument(
         "--purple-agent-url",
         type=str,
         default=settings.purple_agent_url,
@@ -135,6 +141,7 @@ async def main():
     print(f"Sub-Type:       {args.sub_type}")
     print(f"Tool Filter:    {args.tool_filter}")
     print(f"Max Cases:      {args.max_cases}")
+    print(f"Two-Chance:     {'ENABLED' if args.two_chance else 'disabled'}")
     print(f"Purple Agent:   {args.purple_agent_url}")
     print("=" * 60)
     
@@ -151,6 +158,7 @@ async def main():
             tool_filter=args.tool_filter,
             pot_trigger=args.pot_trigger,
             max_cases=args.max_cases,
+            two_chance_mode=args.two_chance,
         )
         
         end_time = datetime.now()
@@ -162,8 +170,18 @@ async def main():
         print("=" * 60)
         print(f"Total Cases:    {results.total_cases}")
         print(f"Valid Rate:     {results.valid_rate:.1f}%")
-        print(f"ASR (valid):    {results.asr_valid:.1f}%")
-        print(f"ASR (all):      {results.asr_all:.1f}%")
+        
+        if args.two_chance and results.weighted_asr is not None:
+            # Two-chance evaluation results
+            print(f"Weighted ASR:   {results.weighted_asr:.1f}%")
+            print(f"Avg Vuln Score: {results.average_vulnerability_score:.2f}")
+            print(f"ASR (valid):    {results.asr_valid:.1f}% (standard)")
+            print(f"ASR (all):      {results.asr_all:.1f}% (standard)")
+        else:
+            # Standard evaluation results
+            print(f"ASR (valid):    {results.asr_valid:.1f}%")
+            print(f"ASR (all):      {results.asr_all:.1f}%")
+        
         print(f"Duration:       {duration}")
         print("=" * 60)
         
@@ -184,6 +202,7 @@ async def main():
                 "sub_type": args.sub_type,
                 "tool_filter": args.tool_filter,
                 "max_cases": args.max_cases,
+                "two_chance_mode": args.two_chance,
             },
             "results": results.to_dict() if hasattr(results, 'to_dict') else {
                 "total_cases": results.total_cases,
