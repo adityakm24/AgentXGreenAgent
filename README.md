@@ -83,24 +83,12 @@ Ensure you produce a `.env` file with your LLM configuration:
 ```bash
 LLM_BASE_URL=https://...
 LLM_API_KEY=...
-LLM_MODEL_NAME=gemini-3-flash-preview
+LLM_MODEL_NAME=gemini-2.5-flash
 MAX_TEST_CASES=9999
 ATTACK_METHOD=all
 ```
 
----
 
-## 📦 Docker Images
-
-This repository provides pre-built Docker images for submission:
-
-*   **Green Agent**: `ghcr.io/meninblack26/asb_multiturn_agents/green-agent:latest`
-*   **Purple Agent**: `ghcr.io/meninblack26/asb_multiturn_agents/purple-agent:latest`
-
-To pull them:
-```bash
-docker pull ghcr.io/meninblack26/asb_multiturn_agents/green-agent:latest
-```
 
 ---
 
