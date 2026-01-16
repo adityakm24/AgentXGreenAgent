@@ -111,10 +111,14 @@ class EvaluatorAgent:
         self.purple_agent_url = purple_agent_url or settings.purple_agent_url
         
         # Initialize the LLM for evaluation reasoning
+        logger.info(f"Initializing LLM with model: {settings.llm_model_name}, base_url: {settings.llm_base_url}")
+        
         self.llm = ChatOpenAI(
             base_url=settings.llm_base_url,
             api_key=settings.llm_api_key,
             model=settings.llm_model_name,
+            # Validation for Gemini/OpenAI compatibility
+            model_name=settings.llm_model_name, 
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
         )

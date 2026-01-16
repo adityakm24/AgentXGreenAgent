@@ -203,9 +203,9 @@ async def jsonrpc_handler(request: JsonRpcRequest):
             
             # Write detailed results to output folder
             import os
-            output_dir = "/results/"
+            output_dir = "/app/output"
             if os.path.exists(output_dir):
-                results_file = os.path.join(output_dir, "results.json")
+                results_file = os.path.join(output_dir, "green_agent_results.json")
                 with open(results_file, "w") as f:
                     json.dump(detailed_results, f, indent=2)
                 print(f"[GreenAgent] Detailed results written to {results_file}")
