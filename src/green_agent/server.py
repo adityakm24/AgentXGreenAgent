@@ -203,7 +203,7 @@ async def jsonrpc_handler(request: JsonRpcRequest):
             
             # Write detailed results to output folder
             import os
-            output_dir = "/app/results"
+            output_dir = "/app/output"
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir, exist_ok=True)
             
