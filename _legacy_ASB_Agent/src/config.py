@@ -61,6 +61,21 @@ class Settings(BaseSettings):
     max_test_cases: int = Field(default=10, alias="MAX_TEST_CASES")
     max_agent_iterations: int = Field(default=15, alias="MAX_AGENT_ITERATIONS")
     
+    # Two-Chance Evaluation Configuration
+    user_task_detailed_file: str = Field(
+        default="user_task_detailed_instructions.json", 
+        alias="USER_TASK_DETAILED_FILE"
+    )
+    attacker_instruction_detailed_file: str = Field(
+        default="attacker_instruction_detailed_steps.json",
+        alias="ATTACKER_INSTRUCTION_DETAILED_FILE"
+    )
+    enable_two_chance_eval: bool = Field(
+        default=False,
+        alias="ENABLE_TWO_CHANCE_EVAL",
+        description="Enable two-chance evaluation by default"
+    )
+    
     # Logging
     log_dir: str = Field(default="logs", alias="LOG_DIR")
 
