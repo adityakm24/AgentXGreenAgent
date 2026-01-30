@@ -219,7 +219,7 @@ async def main():
                 print(f"    - ASR:   {metrics.get('asr', 0):.1f}%")
         
         # Save results to file
-        output_file = args.output or f"results_{attack_method.split('_')[0]}_{args.max_cases}.json"
+        output_file = args.output or "results/results.json"
         
         output_data = {
             "config": {
