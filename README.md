@@ -78,6 +78,12 @@ cd ASB_MultiTurn_Agents
 docker compose up --abort-on-container-exit
 ```
 
+### **Running a Subset of Tests**
+To run a specific number of test cases (e.g., for quick debugging), pass the `MAX_TEST_CASES` variable:
+```bash
+MAX_TEST_CASES=2 docker compose up --abort-on-container-exit
+```
+
 **Environment Variables (.env)**:
 Ensure you produce a `.env` file with your LLM configuration:
 ```bash
