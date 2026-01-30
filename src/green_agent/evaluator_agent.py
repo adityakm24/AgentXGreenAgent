@@ -133,6 +133,7 @@ class EvaluatorAgent:
         tool_filter: str = "all",
         pot_trigger: Optional[str] = None,
         max_cases: Optional[int] = None,
+        two_chance_mode: bool = False,
         on_case_complete: Optional[Callable[[int, CaseResult], Awaitable[None]]] = None,
     ) -> EvaluationResult:
         """
